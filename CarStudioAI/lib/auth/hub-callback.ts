@@ -61,6 +61,10 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+function normalizeNonce(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
 async function resolveOrCreateHubUser(sub: string, email: string, name?: string) {
   const supabase = createServerSupabaseServiceClient();
 
@@ -128,7 +132,13 @@ export async function handleHubCallback(request: Request) {
       const verified = await verifyHubHandoffToken(token);
       const pendingNonce = cookieStore.get(HUB_PENDING_NONCE_COOKIE_NAME)?.value?.trim() || "";
       const tokenNonce = verified.nonce?.trim() || "";
-      const nonceMatch = Boolean(tokenNonce && pendingNonce && tokenNonce === pendingNonce);
+      const normalizedTokenNonce = normalizeNonce(tokenNonce);
+      const normalizedPendingNonce = normalizeNonce(pendingNonce);
+      const nonceMatch = Boolean(
+        normalizedTokenNonce &&
+          normalizedPendingNonce &&
+          normalizedTokenNonce === normalizedPendingNonce,
+      );
 
       if (!nonceMatch) {
         logHubHandoffError("invalid_hub_nonce_details", {
@@ -139,6 +149,8 @@ export async function handleHubCallback(request: Request) {
           nonceMatch,
           tokenNonceLength: tokenNonce.length,
           pendingNonceLength: pendingNonce.length,
+          normalizedTokenNonceLength: normalizedTokenNonce.length,
+          normalizedPendingNonceLength: normalizedPendingNonce.length,
           callbackOrigin: url.origin,
           hasRedirectTo: Boolean(requestedRedirect),
         });
