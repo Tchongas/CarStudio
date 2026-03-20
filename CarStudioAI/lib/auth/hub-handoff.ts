@@ -80,12 +80,16 @@ export function createAbsoluteUrl(request: Request, path: string) {
   return new URL(path, getBaseUrlFromRequest(request));
 }
 
-export function buildHubStartUrl(request: Request, redirectTo?: string | null) {
+export function buildHubStartUrl(
+  request: Request,
+  redirectTo?: string | null,
+  forcedNonce?: string | null,
+) {
   const configuredHubLoginUrl = process.env.HUB_CARSTUDIO_LOGIN_URL?.trim();
   const url = new URL(configuredHubLoginUrl || HUB_START_ENDPOINT);
   const callbackUrl = new URL("/api/auth/callback", getBaseUrlFromRequest(request)).toString();
   const safeRedirect = sanitizeRedirectPath(redirectTo, getDefaultRedirectPath());
-  const nonce = crypto.randomUUID();
+  const nonce = forcedNonce?.trim() || crypto.randomUUID();
 
   url.searchParams.set("product", HUB_PRODUCT);
   url.searchParams.set("return_to", callbackUrl);

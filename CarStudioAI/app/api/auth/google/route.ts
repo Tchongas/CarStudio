@@ -6,6 +6,7 @@ import {
   buildHubStartUrl,
   createAbsoluteUrl,
   getDefaultRedirectPath,
+  parseCookieHeader,
   sanitizeRedirectPath,
 } from "@/lib/auth/hub-handoff";
 
@@ -24,11 +25,13 @@ export async function GET(request: Request) {
   const requestedRedirect = url.searchParams.get("redirect_to");
   const safeRedirect = sanitizeRedirectPath(requestedRedirect, getDefaultRedirectPath());
   const callbackUrl = createAbsoluteUrl(request, "/api/auth/callback");
+  const parsedCookies = parseCookieHeader(request.headers.get("cookie"));
+  const existingPendingNonce = parsedCookies[HUB_PENDING_NONCE_COOKIE_NAME] ?? null;
 
   const hubLoginUrl = process.env.HUB_CARSTUDIO_LOGIN_URL?.trim();
 
   if (hubLoginUrl) {
-    const { hubStartUrl, nonce } = buildHubStartUrl(request, safeRedirect);
+    const { hubStartUrl, nonce } = buildHubStartUrl(request, safeRedirect, existingPendingNonce);
     const response = NextResponse.redirect(hubStartUrl);
     const cookieOptions = buildCookieOptions();
 
