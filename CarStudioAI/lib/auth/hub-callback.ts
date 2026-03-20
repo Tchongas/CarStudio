@@ -127,8 +127,21 @@ export async function handleHubCallback(request: Request) {
     try {
       const verified = await verifyHubHandoffToken(token);
       const pendingNonce = cookieStore.get(HUB_PENDING_NONCE_COOKIE_NAME)?.value?.trim() || "";
+      const tokenNonce = verified.nonce?.trim() || "";
+      const nonceMatch = Boolean(tokenNonce && pendingNonce && tokenNonce === pendingNonce);
 
-      if (!verified.nonce || !pendingNonce || verified.nonce !== pendingNonce) {
+      if (!nonceMatch) {
+        logHubHandoffError("invalid_hub_nonce_details", {
+          correlationId,
+          callbackPath: url.pathname,
+          hasTokenNonce: Boolean(tokenNonce),
+          hasPendingNonceCookie: Boolean(pendingNonce),
+          nonceMatch,
+          tokenNonceLength: tokenNonce.length,
+          pendingNonceLength: pendingNonce.length,
+          callbackOrigin: url.origin,
+          hasRedirectTo: Boolean(requestedRedirect),
+        });
         throw new HubHandoffError("invalid_hub_nonce");
       }
 
