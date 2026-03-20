@@ -1,0 +1,20 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "[!C]*/**": true,
+        "C[!a]*/**": true,
+        "Ca[!r]*/**": true,
+        "Car[!S]*/**": true,
+        "CarS[!t]*/**": true,
+        "CarSt[!u]*/**": true,
+        "CarStu[!d]*/**": true,
+        "CarStud[!i]*/**": true,
+        "CarStudi[!o]*/**": true,
+        "CarStudio[!A]*/**": true,
+        "CarStudioA[!I]*/**": true
+    }
+}

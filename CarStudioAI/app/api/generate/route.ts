@@ -1,6 +1,6 @@
-import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
-import { BACKGROUND_VARIANTS, PROMPT_BASE, type BackgroundId } from "@/lib/ai/backgrounds";
+import { BACKGROUND_VARIANTS, type BackgroundId } from "@/lib/ai/backgrounds";
+import { generateCarStudioImage } from "@/lib/ai/gemini-service";
 import {
   consumeCreditByEmail,
   getAuthenticatedEmail,
@@ -20,8 +20,7 @@ type GenerateBody = {
 };
 
 export async function POST(request: Request) {
-  const geminiKey = process.env.GEMINI_API_KEY;
-  if (!geminiKey) {
+  if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json(
       { error: "GEMINI_API_KEY não configurada no servidor." },
       { status: 500 },
@@ -71,71 +70,19 @@ export async function POST(request: Request) {
     );
     debitApplied = true;
 
-    const ai = new GoogleGenAI({ apiKey: geminiKey });
-    const hasCustomBackground = Boolean(body.customBackgroundBase64 && body.customBackgroundMimeType);
-    const fullPrompt = `${PROMPT_BASE}\n\n${hasCustomBackground ? "Use a imagem de fundo personalizada enviada pelo usuário como cenário principal." : variant.promptSuffix}`;
-
-    const parts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [
-      {
-        inlineData: {
-          data: body.base64Image.split(",")[1] ?? body.base64Image,
-          mimeType: body.mimeType,
-        },
-      },
-    ];
-
-    if (hasCustomBackground && body.customBackgroundMimeType) {
-      parts.push({
-        inlineData: {
-          data: body.customBackgroundBase64!.split(",")[1] ?? body.customBackgroundBase64!,
-          mimeType: body.customBackgroundMimeType,
-        },
-      });
-    }
-
-    parts.push({ text: fullPrompt });
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-image",
-      contents: {
-        parts,
-      },
-      config: {
-        temperature: 0.3,
-      },
+    const result = await generateCarStudioImage({
+      base64Image: body.base64Image,
+      mimeType: body.mimeType,
+      backgroundId: body.background,
+      customBackgroundBase64: body.customBackgroundBase64,
+      customBackgroundMimeType: body.customBackgroundMimeType,
     });
 
-    for (const part of response.candidates?.[0]?.content?.parts ?? []) {
-      if (part.inlineData?.data) {
-        return NextResponse.json({
-          imageUrl: `data:image/png;base64,${part.inlineData.data}`,
-          creditsBalance: balanceAfterDebit,
-        });
-      }
-
-      if (part.text?.includes("Imagem inválida")) {
-        const refundedBalance = await grantCreditByEmail(
-          supabase,
-          authResult.email,
-          1,
-          "refund",
-          "generation_attempt",
-          debitReference,
-          refundKey,
-          {
-            reason: "invalid_vehicle_image",
-          },
-        );
-        creditedBack = true;
-
-        return NextResponse.json(
-          {
-            error: "A imagem enviada não parece ser de um veículo. Por favor, tente outra foto.",
-            creditsBalance: refundedBalance,
-          },
-          { status: 400 },
-        );
-      }
+    if (result.imageUrl) {
+      return NextResponse.json({
+        imageUrl: result.imageUrl,
+        creditsBalance: balanceAfterDebit,
+      });
     }
 
     const refundedBalance = await grantCreditByEmail(
@@ -147,17 +94,21 @@ export async function POST(request: Request) {
       debitReference,
       refundKey,
       {
-        reason: "empty_ai_response",
+        reason: result.error === "A imagem enviada não parece ser de um veículo. Por favor, tente outra foto."
+          ? "invalid_vehicle_image"
+          : "empty_ai_response",
       },
     );
     creditedBack = true;
 
     return NextResponse.json(
       {
-        error: "Não foi possível gerar a imagem. Tente novamente.",
+        error: result.error,
         creditsBalance: refundedBalance,
       },
-      { status: 502 },
+      {
+        status: result.error === "A imagem enviada não parece ser de um veículo. Por favor, tente outra foto." ? 400 : 502,
+      },
     );
   } catch (error) {
     if (isInsufficientCreditsError(error)) {
