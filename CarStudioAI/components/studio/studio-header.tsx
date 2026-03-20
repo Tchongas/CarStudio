@@ -33,8 +33,12 @@ export function StudioHeader({ credits, isLoadingCredits, userEmail }: StudioHea
   }, []);
 
   const handleLogout = async () => {
-    if (!supabase) return;
-    await supabase.auth.signOut();
+    await fetch("/api/auth/logout", { method: "POST" });
+
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+
     window.location.href = "/";
   };
 

@@ -19,6 +19,7 @@ type UserPreview = {
 
 type CreditsResponse = {
   creditsBalance?: number;
+  email?: string;
   error?: string;
 };
 
@@ -75,18 +76,14 @@ export function StudioApp() {
     setIsLoadingCredits(true);
     const accessToken = await getAccessToken();
 
-    if (!accessToken) {
-      setCredits(0);
-      setIsLoadingCredits(false);
-      return;
-    }
-
     try {
       const response = await fetch("/api/credits", {
         method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: accessToken
+          ? {
+              Authorization: `Bearer ${accessToken}`,
+            }
+          : undefined,
       });
 
       const payload = (await response.json()) as CreditsResponse;
@@ -98,6 +95,7 @@ export function StudioApp() {
       }
 
       setCredits(payload.creditsBalance ?? 0);
+      setUser(payload.email ? { email: payload.email } : null);
     } catch {
       setCredits(0);
       setAuthNotice("Não foi possível carregar seus créditos.");
@@ -116,23 +114,16 @@ export function StudioApp() {
       const email = data.user?.email;
       if (email) {
         setUser({ email });
-        await refreshCredits();
-      } else {
-        setCredits(0);
-        setIsLoadingCredits(false);
       }
+
+      await refreshCredits();
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
       const email = session?.user?.email;
       setUser(email ? { email } : null);
 
-       if (email) {
-        await refreshCredits();
-      } else {
-        setCredits(0);
-        setIsLoadingCredits(false);
-      }
+      await refreshCredits();
     });
 
     return () => {
@@ -239,10 +230,6 @@ export function StudioApp() {
     }
 
     const accessToken = await getAccessToken();
-    if (!accessToken) {
-      setAuthNotice("Faça login para gerar imagens.");
-      return;
-    }
 
     setIsProcessing(true);
     setAuthNotice(null);
@@ -267,7 +254,7 @@ export function StudioApp() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify({
           base64Image: base64,

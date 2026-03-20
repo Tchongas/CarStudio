@@ -1,4 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  HUB_SESSION_COOKIE_NAME,
+  verifyHubSessionToken,
+} from "@/lib/auth/hub-handoff";
 import { createSupabaseMiddlewareClient } from "@/lib/supabase/middleware";
 
 /**
@@ -20,6 +24,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const hubSessionCookie = request.cookies.get(HUB_SESSION_COOKIE_NAME)?.value;
+  if (hubSessionCookie) {
+    const hubSession = await verifyHubSessionToken(hubSessionCookie);
+    if (hubSession?.email) {
+      return NextResponse.next();
+    }
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -34,9 +46,9 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    const loginUrl = new URL("/", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+    const handoffStartUrl = new URL("/api/auth/hub/start", request.url);
+    handoffStartUrl.searchParams.set("redirect_to", `${pathname}${request.nextUrl.search}`);
+    return NextResponse.redirect(handoffStartUrl);
   }
 
   return response;

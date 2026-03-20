@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getHubSessionFromRequest } from "@/lib/auth/hub-handoff";
 import {
   CS_WALLET_KEY,
   buildWalletMeta,
@@ -28,21 +29,27 @@ function extractBearerToken(request: Request) {
 
 export async function getAuthenticatedEmail(request: Request, supabase: SupabaseClient) {
   const token = extractBearerToken(request);
-  if (!token) {
-    return { email: null, error: "MISSING_AUTH" } as const;
+
+  if (token) {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (!error) {
+      const email = data.user?.email?.trim().toLowerCase() ?? null;
+      if (email) {
+        return { email, error: null } as const;
+      }
+    }
   }
 
-  const { data, error } = await supabase.auth.getUser(token);
-  if (error) {
+  const hubSession = await getHubSessionFromRequest(request);
+  if (hubSession?.email) {
+    return { email: hubSession.email, error: null } as const;
+  }
+
+  if (token) {
     return { email: null, error: "INVALID_AUTH" } as const;
   }
 
-  const email = data.user?.email?.trim().toLowerCase() ?? null;
-  if (!email) {
-    return { email: null, error: "MISSING_EMAIL" } as const;
-  }
-
-  return { email, error: null } as const;
+  return { email: null, error: "MISSING_AUTH" } as const;
 }
 
 // ---------------------------------------------------------------------------

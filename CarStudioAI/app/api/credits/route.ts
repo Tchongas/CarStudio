@@ -20,7 +20,10 @@ export async function GET(request: Request) {
 
     const balance = await getBalanceByEmail(supabase, authResult.email);
 
-    return NextResponse.json({ creditsBalance: Math.max(balance, 0) });
+    return NextResponse.json({
+      creditsBalance: Math.max(balance, 0),
+      email: authResult.email,
+    });
   } catch (error) {
     if (isHubUserNotFoundError(error)) {
       return NextResponse.json(

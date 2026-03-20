@@ -2,16 +2,29 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { StudioApp } from "@/components/studio-app";
+import {
+  HUB_SESSION_COOKIE_NAME,
+  verifyHubSessionToken,
+} from "@/lib/auth/hub-handoff";
 
 export default async function StudioPage() {
+  const cookieStore = await cookies();
+  const hubSessionCookie = cookieStore.get(HUB_SESSION_COOKIE_NAME)?.value;
+
+  if (hubSessionCookie) {
+    const hubSession = await verifyHubSessionToken(hubSessionCookie);
+    if (hubSession?.email) {
+      return <StudioApp />;
+    }
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    redirect("/");
+    redirect("/api/auth/hub/start?redirect_to=%2Fstudio");
   }
 
-  const cookieStore = await cookies();
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
@@ -30,7 +43,7 @@ export default async function StudioPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/");
+    redirect("/api/auth/hub/start?redirect_to=%2Fstudio");
   }
 
   return <StudioApp />;
