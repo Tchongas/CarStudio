@@ -314,7 +314,6 @@ export default function App() {
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 px-6 py-4 text-center">
         <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em]">
-          Powered by Gemini 2.5 Flash Image • No Data Stored • Instant Generation
         </p>
       </footer>
     </div>

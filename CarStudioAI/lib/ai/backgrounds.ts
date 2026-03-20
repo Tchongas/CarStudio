@@ -20,38 +20,42 @@ Se a imagem não for claramente um carro, responda apenas: "Imagem inválida par
 export const BACKGROUND_VARIANTS = {
   white: {
     id: "white",
-    label: "Fundo Branco Clean",
-    description: "Estúdio profissional com fundo infinito branco e iluminação suave.",
-    promptSuffix:
-      "Cenário desejado: Estúdio fotográfico profissional com fundo infinito branco, iluminação de softbox, reflexos controlados e sombra de contato realista no chão.",
+    label: "Estúdio Branco",
+    description: "Fundo infinito branco clássico para destaque total do veículo.",
+    images: ["https://i.postimg.cc/3xM88M5C/fundo-branco-studio.png"],
+    promptSuffix: "Use o estúdio branco fornecido.",
   },
   dark: {
     id: "dark",
-    label: "Showroom Escuro Premium",
-    description: "Ambiente luxuoso com iluminação dramática e tons escuros.",
-    promptSuffix:
-      "Cenário desejado: Showroom automotivo premium com paredes escuras, piso de concreto polido refletivo, iluminação dramática de teto (rim light) e atmosfera sofisticada.",
+    label: "Estúdio Dark Premium",
+    description: "Ambiente escuro e sofisticado com iluminação dramática.",
+    images: ["https://i.postimg.cc/qvBKGCqG/fundo-escuro.png"],
+    promptSuffix: "Use o showroom escuro fornecido.",
   },
   industrial: {
     id: "industrial",
-    label: "Industrial Moderno",
-    description: "Galpão moderno com texturas de concreto e luz natural.",
-    promptSuffix:
-      "Cenário desejado: Galpão industrial moderno e limpo, paredes de concreto aparente, janelas amplas com luz natural difusa, ambiente urbano e contemporâneo.",
+    label: "Galpão Industrial",
+    description: "Estilo urbano com texturas de concreto e luz natural.",
+    images: [
+      "https://i.postimg.cc/FHtrrt5Z/fundo-industrial1.jpg",
+      "https://i.postimg.cc/2SpkkpRG/fundo-industrial2.jpg",
+      "https://i.postimg.cc/rw6VV6XQ/fundo-industrial3.jpg"
+    ],
+    promptSuffix: "Use o galpão industrial fornecido.",
   },
   farm: {
     id: "farm",
-    label: "Fazenda & Natureza",
-    description: "Cenário rural ideal para caminhonetes e off-road.",
-    promptSuffix:
-      "Cenário desejado: Estrada de terra batida em uma fazenda ao entardecer, cercas de madeira, grama verde, árvores ao fundo e luz solar dourada (golden hour) criando reflexos naturais na lataria.",
+    label: "Off-Road / Rural",
+    description: "Cenário de fazenda ideal para SUVs e picapes.",
+    images: ["https://i.postimg.cc/gkb8x2hq/fundo-fazenda.png"],
+    promptSuffix: "Use o cenário rural fornecido.",
   },
   condo: {
     id: "condo",
-    label: "Condomínio Residencial",
-    description: "Rua sem saída com árvores e grama ao fundo.",
-    promptSuffix:
-      "Cenário desejado: Rua sem saída redonda (cul-de-sac) em um condomínio de luxo, asfalto limpo e preservado, calçadas com grama aparada, árvores ornamentais ao fundo e iluminação de dia claro.",
+    label: "Condomínio Luxo",
+    description: "Ambiente residencial limpo e arborizado.",
+    images: ["https://i.postimg.cc/QdL88LGR/fundo-condominio.png"],
+    promptSuffix: "Use o cenário de condomínio fornecido.",
   },
 } as const;
 
