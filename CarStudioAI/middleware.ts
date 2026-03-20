@@ -46,7 +46,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    const handoffStartUrl = new URL("/api/auth/hub/start", request.url);
+    const handoffStartUrl = new URL("/api/auth/google", request.url);
     handoffStartUrl.searchParams.set("redirect_to", `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(handoffStartUrl);
   }

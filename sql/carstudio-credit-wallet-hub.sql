@@ -191,16 +191,80 @@ BEGIN
   END IF;
 END $$;
 
+-- Normalize legacy entry_type values before enforcing canonical constraint
+UPDATE public.credit_ledger SET entry_type = 'grant'      WHERE entry_type = 'credit';
+UPDATE public.credit_ledger SET entry_type = 'spend'      WHERE entry_type = 'debit';
+UPDATE public.credit_ledger SET entry_type = 'adjustment' WHERE entry_type IS NULL;
+
+DO $$
+DECLARE
+  v_conname TEXT;
+BEGIN
+  -- Drop any previous CHECK on entry_type (including old definitions that reused
+  -- the same constraint name but still validate only credit/debit/adjustment).
+  FOR v_conname IN
+    SELECT c.conname
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE t.relname = 'credit_ledger'
+      AND n.nspname = 'public'
+      AND c.contype = 'c'
+      AND pg_get_constraintdef(c.oid) LIKE '%entry_type%'
+  LOOP
+    EXECUTE format('ALTER TABLE public.credit_ledger DROP CONSTRAINT IF EXISTS %I', v_conname);
+  END LOOP;
+
+  ALTER TABLE public.credit_ledger
+    ADD CONSTRAINT credit_ledger_entry_type_valid
+    CHECK (entry_type IN ('grant', 'spend', 'adjustment', 'refund'));
+END $$;
+
+ALTER TABLE public.credit_ledger
+  ALTER COLUMN entry_type SET DEFAULT 'adjustment';
+
+-- Legacy compatibility: some shared DBs still enforce credit_ledger.direction NOT NULL
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'credit_ledger_entry_type_valid'
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'credit_ledger'
+      AND column_name = 'direction'
   ) THEN
     ALTER TABLE public.credit_ledger
-      ADD CONSTRAINT credit_ledger_entry_type_valid
-      CHECK (entry_type IN ('grant', 'spend', 'adjustment', 'refund'));
+      ADD COLUMN direction TEXT;
   END IF;
 END $$;
+
+UPDATE public.credit_ledger
+SET direction = CASE
+  WHEN entry_type IN ('grant', 'refund') THEN 'credit'
+  WHEN entry_type = 'spend' THEN 'debit'
+  WHEN amount >= 0 THEN 'credit'
+  ELSE 'debit'
+END
+WHERE direction IS NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'credit_ledger_direction_valid'
+  ) THEN
+    ALTER TABLE public.credit_ledger
+      ADD CONSTRAINT credit_ledger_direction_valid
+      CHECK (direction IN ('credit', 'debit'));
+  END IF;
+END $$;
+
+ALTER TABLE public.credit_ledger
+  ALTER COLUMN direction SET DEFAULT 'credit';
+
+ALTER TABLE public.credit_ledger
+  ALTER COLUMN direction SET NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_credit_ledger_idempotency_unique
   ON public.credit_ledger (idempotency_key)
@@ -293,6 +357,7 @@ BEGIN
   INSERT INTO public.credit_ledger (
     user_id,
     wallet_key,
+    direction,
     amount,
     entry_type,
     reason,
@@ -304,6 +369,7 @@ BEGIN
   VALUES (
     p_user_id,
     v_wallet_key,
+    'credit',
     p_amount,
     'grant',
     COALESCE(p_reason, ''),
@@ -394,6 +460,7 @@ BEGIN
   INSERT INTO public.credit_ledger (
     user_id,
     wallet_key,
+    direction,
     amount,
     entry_type,
     reason,
@@ -405,6 +472,7 @@ BEGIN
   VALUES (
     p_user_id,
     v_wallet_key,
+    'debit',
     -p_amount,
     'spend',
     COALESCE(p_reason, ''),
@@ -432,6 +500,7 @@ WHERE ucw.user_id IS NULL;
 INSERT INTO public.credit_ledger (
   user_id,
   wallet_key,
+  direction,
   amount,
   entry_type,
   reason,
@@ -443,6 +512,7 @@ INSERT INTO public.credit_ledger (
 SELECT
   hu.id,
   'car_studio',
+  'credit',
   2,
   'grant',
   'initial_balance',

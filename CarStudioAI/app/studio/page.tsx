@@ -22,7 +22,7 @@ export default async function StudioPage() {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    redirect("/api/auth/hub/start?redirect_to=%2Fstudio");
+    redirect("/api/auth/google?redirect_to=%2Fstudio");
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -43,7 +43,7 @@ export default async function StudioPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/api/auth/hub/start?redirect_to=%2Fstudio");
+    redirect("/api/auth/google?redirect_to=%2Fstudio");
   }
 
   return <StudioApp />;

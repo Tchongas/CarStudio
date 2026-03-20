@@ -7,6 +7,8 @@ const HUB_PRODUCT = "car-studio";
 const DEFAULT_REDIRECT = "/studio";
 
 export const HUB_SESSION_COOKIE_NAME = "car_studio_hub_session";
+export const HUB_PENDING_NONCE_COOKIE_NAME = "car_studio_hub_nonce";
+export const HUB_PENDING_REDIRECT_COOKIE_NAME = "car_studio_hub_redirect";
 
 type HubHandoffClaims = {
   sub: string;
@@ -79,15 +81,27 @@ export function createAbsoluteUrl(request: Request, path: string) {
 }
 
 export function buildHubStartUrl(request: Request, redirectTo?: string | null) {
-  const url = new URL(HUB_START_ENDPOINT);
+  const configuredHubLoginUrl = process.env.HUB_CARSTUDIO_LOGIN_URL?.trim();
+  const url = new URL(configuredHubLoginUrl || HUB_START_ENDPOINT);
   const callbackUrl = new URL("/api/auth/callback", getBaseUrlFromRequest(request)).toString();
   const safeRedirect = sanitizeRedirectPath(redirectTo, getDefaultRedirectPath());
+  const nonce = crypto.randomUUID();
 
   url.searchParams.set("product", HUB_PRODUCT);
   url.searchParams.set("return_to", callbackUrl);
   url.searchParams.set("redirect_to", safeRedirect);
+  url.searchParams.set("nonce", nonce);
 
-  return url.toString();
+  return {
+    hubStartUrl: url.toString(),
+    callbackUrl,
+    safeRedirect,
+    nonce,
+  };
+}
+
+export function getHubStartEndpointFromEnv() {
+  return process.env.HUB_CARSTUDIO_LOGIN_URL?.trim() || HUB_START_ENDPOINT;
 }
 
 export function parseCookieHeader(cookieHeader: string | null) {
@@ -145,6 +159,7 @@ export async function verifyHubHandoffToken(token: string) {
   const email = parseAsString(payload.email).trim().toLowerCase();
   const name = parseAsString(payload.name).trim();
   const product = parseAsString(payload.product).trim();
+  const nonce = parseAsString(payload.nonce).trim();
 
   if (!sub || !email) {
     throw new HubHandoffError("invalid_hub_claims");
@@ -159,6 +174,7 @@ export async function verifyHubHandoffToken(token: string) {
     email,
     name: name || undefined,
     product,
+    nonce: nonce || undefined,
   };
 }
 

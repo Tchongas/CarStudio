@@ -12,13 +12,15 @@ const ERROR_MESSAGES: Record<string, string> = {
   invalid_hub_token: "Não foi possível validar seu acesso pela área de membros. Faça login novamente.",
   missing_hub_token: "Token de acesso ausente. Tente iniciar o acesso novamente pela área de membros.",
   invalid_hub_product: "Este link não corresponde ao produto Car Studio.",
+  invalid_hub_nonce: "Sua sessão de login expirou ou já foi usada. Inicie o acesso novamente.",
+  hub_user_sync_failed: "Não foi possível sincronizar sua conta no Hub. Tente novamente em instantes.",
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = (await searchParams) ?? {};
   const errorCode = params.error ?? "";
   const redirectPath = params.redirect?.startsWith("/") ? params.redirect : "/studio";
-  const hubStartHref = `/api/auth/hub/start?redirect_to=${encodeURIComponent(redirectPath)}`;
+  const hubStartHref = `/api/auth/google?redirect_to=${encodeURIComponent(redirectPath)}`;
   const errorMessage = ERROR_MESSAGES[errorCode];
 
   return (

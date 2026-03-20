@@ -10,14 +10,17 @@ Hub start endpoint:
 
 `GET https://membros.allanfulcher.com/api/auth/car-studio/start`
 
-Car Studio now redirects to this endpoint through an internal bridge route:
+Car Studio now starts auth through:
 
-`/api/auth/hub/start?redirect_to=/studio`
+`/api/auth/google?redirect_to=/studio`
 
-The bridge route builds the Hub URL with required params:
+When `HUB_CARSTUDIO_LOGIN_URL` is set, `/api/auth/google` builds the Hub URL with required params:
 - `product=car-studio`
 - `return_to=<CAR_STUDIO_BASE_URL>/api/auth/callback`
 - `redirect_to=<safe-relative-path>`
+- `nonce=<one-time-random-value>`
+
+If `HUB_CARSTUDIO_LOGIN_URL` is missing, `/api/auth/google` falls back to direct Supabase Google OAuth flow and sends users back to `/api/auth/callback?code=...`.
 
 Hub query params:
 - `product=car-studio` (required)
@@ -28,6 +31,9 @@ On success, Hub redirects browser to:
 
 `<return_to>?token=<HUB_JWT>&redirect_to=<optional-relative-path>`
 
+Compatibility route:
+- `/api/auth/hub/start` now forwards to `/api/auth/google`.
+
 ## Callback routes (Car Studio)
 
 Implemented routes:
@@ -35,6 +41,10 @@ Implemented routes:
 - `/auth/callback/google` (compatibility)
 
 Both routes call the same server-only callback handler.
+
+`/api/auth/callback` accepts either:
+- `token` (Hub handoff JWT), or
+- `code` (Supabase OAuth code)
 
 ## JWT verification rules
 
@@ -44,6 +54,7 @@ File: `lib/auth/hub-handoff.ts`
 - Algorithm restricted to `HS256`
 - Requires `sub` and `email`
 - Requires `product === 'car-studio'`
+- Requires token nonce to match pending one-time nonce cookie
 - Rejects invalid/expired tokens
 
 ## Local session bridge
@@ -61,12 +72,18 @@ After successful token validation, Car Studio creates an httpOnly cookie session
 
 This gives a stable local identity keyed by Hub `sub`.
 
+Before setting the local session cookie, callback resolves or creates the matching `hub_users` record in shared DB.
+
 ## Redirect safety
 
 `redirect_to` is sanitized:
 - allowed: relative paths starting with `/`
 - blocked: absolute URLs and `//...`
 - fallback: `CAR_STUDIO_DEFAULT_REDIRECT` (or `/studio`)
+
+One-time pending cookies are used and cleared after callback:
+- `car_studio_hub_nonce`
+- `car_studio_hub_redirect`
 
 ## Error handling
 
@@ -78,6 +95,8 @@ Current error codes:
 - `missing_hub_token`
 - `invalid_hub_token`
 - `invalid_hub_product`
+- `invalid_hub_nonce`
+- `hub_user_sync_failed`
 
 Structured server logging event:
 - `car_studio_hub_handoff_error`
@@ -92,7 +111,7 @@ Structured server logging event:
 1. valid Hub session cookie exists, or
 2. valid Supabase session exists
 
-Otherwise redirects to `/api/auth/hub/start?redirect_to=/studio...`.
+Otherwise redirects to `/api/auth/google?redirect_to=/studio...`.
 
 ### API auth fallback
 
@@ -105,9 +124,13 @@ This enables Hub-handoff users to use `/api/credits` and `/api/generate` without
 ## Required env vars
 
 ```env
+HUB_CARSTUDIO_LOGIN_URL=
 HUB_JWT_SECRET=
 CAR_STUDIO_BASE_URL=
 CAR_STUDIO_DEFAULT_REDIRECT=/studio
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 ```
 
 ## Logout behavior
