@@ -16,15 +16,18 @@ export type CreditReason =
   | "generation"
   | "refund"
   | "reversal"
-  | "adjustment";
+  | "adjustment"
+  | "initial_balance";
 
 /**
- * Allowed reference_type values (enforced by credit_ledger_reference_type_check constraint).
+ * Allowed reference_type values (enforced by cs_credit_ledger CHECK constraint).
  */
 export type CreditReferenceType =
   | "webhook_event"
   | "generation_attempt"
-  | "admin";
+  | "admin"
+  | "migration"
+  | "bootstrap";
 
 /**
  * Build canonical wallet meta for RPC calls.

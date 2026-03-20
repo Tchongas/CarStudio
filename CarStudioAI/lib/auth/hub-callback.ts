@@ -65,6 +65,35 @@ function normalizeNonce(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+async function ensureWalletExists(userId: string) {
+  const supabase = createServerSupabaseServiceClient();
+
+  const { data, error } = await supabase.rpc("cs_ensure_wallet", {
+    p_user_id: userId,
+  });
+
+  if (error) {
+    console.warn(
+      JSON.stringify({
+        event: "car_studio_ensure_wallet_warning",
+        userId,
+        reason: error.message,
+      }),
+    );
+    return;
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  console.info(
+    JSON.stringify({
+      event: "car_studio_ensure_wallet",
+      userId,
+      newBalance: row?.new_balance ?? null,
+      alreadyExisted: row?.already_existed ?? null,
+    }),
+  );
+}
+
 async function resolveOrCreateHubUser(sub: string, email: string, name?: string) {
   const supabase = createServerSupabaseServiceClient();
 
@@ -157,7 +186,8 @@ export async function handleHubCallback(request: Request) {
         throw new HubHandoffError("invalid_hub_nonce");
       }
 
-      await resolveOrCreateHubUser(verified.sub, verified.email, verified.name);
+      const hubUserId = await resolveOrCreateHubUser(verified.sub, verified.email, verified.name);
+      await ensureWalletExists(hubUserId);
 
       const sessionToken = await createHubSessionToken({
         hubSub: verified.sub,
@@ -228,7 +258,7 @@ export async function handleHubCallback(request: Request) {
     },
   });
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code!);
+  const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code!);
 
   if (error) {
     logHubHandoffError("oauth_exchange_failed", {
@@ -241,6 +271,31 @@ export async function handleHubCallback(request: Request) {
     );
     clearPendingHandoffCookies(response);
     return response;
+  }
+
+  const supabaseEmail = sessionData.user?.email?.trim().toLowerCase();
+  if (supabaseEmail) {
+    try {
+      const serviceSupabase = createServerSupabaseServiceClient();
+      const { data: hubUser } = await serviceSupabase
+        .from("hub_users")
+        .select("id")
+        .eq("email", supabaseEmail)
+        .maybeSingle();
+
+      if (hubUser?.id) {
+        await ensureWalletExists(hubUser.id);
+      }
+    } catch (walletError) {
+      console.warn(
+        JSON.stringify({
+          event: "car_studio_code_flow_wallet_warning",
+          correlationId,
+          email: supabaseEmail,
+          reason: walletError instanceof Error ? walletError.message : "unknown",
+        }),
+      );
+    }
   }
 
   const response = NextResponse.redirect(createAbsoluteUrl(request, destinationPath));

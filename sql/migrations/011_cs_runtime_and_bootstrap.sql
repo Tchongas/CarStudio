@@ -212,7 +212,58 @@ BEGIN
 END;
 $$;
 
--- 4) Bootstrap trigger: every new hub user receives 2 CS credits
+-- 4) Ensure wallet exists (idempotent, called from app on every login)
+--    Creates wallet + grants 8 free credits ONLY if wallet does not exist yet.
+CREATE OR REPLACE FUNCTION public.cs_ensure_wallet(
+  p_user_id UUID,
+  p_meta JSONB DEFAULT '{}'::jsonb
+)
+RETURNS TABLE(new_balance INTEGER, already_existed BOOLEAN)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_existing_balance INTEGER;
+  v_result RECORD;
+BEGIN
+  -- Check if wallet already exists
+  SELECT balance INTO v_existing_balance
+  FROM public.cs_user_wallets
+  WHERE user_id = p_user_id
+    AND wallet_key = 'car_studio';
+
+  IF v_existing_balance IS NOT NULL THEN
+    -- Wallet already exists, return current balance
+    new_balance := v_existing_balance;
+    already_existed := TRUE;
+    RETURN NEXT;
+    RETURN;
+  END IF;
+
+  -- Wallet does not exist: create it with 8 free credits
+  SELECT * INTO v_result
+  FROM public.cs_grant_credits(
+    p_user_id,
+    8,
+    'initial_balance',
+    'bootstrap',
+    'welcome_grant',
+    concat('cs:welcome:', p_user_id::text),
+    jsonb_build_object(
+      'wallet_key', 'car_studio',
+      'wallet_code', 'CS',
+      'product_id', 'car-studio',
+      'note', 'Initial Car Studio balance (8 free credits)'
+    )
+  );
+
+  new_balance := COALESCE(v_result.new_balance, 8);
+  already_existed := FALSE;
+  RETURN NEXT;
+END;
+$$;
+
+-- 5) Bootstrap trigger: every new hub user receives 8 CS credits
 CREATE OR REPLACE FUNCTION public.cs_bootstrap_wallet_on_hub_user_insert()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -224,16 +275,16 @@ BEGIN
   SELECT * INTO v_result
   FROM public.cs_grant_credits(
     NEW.id,
-    2,
-    'manual_grant',
-    'bootstrap',
+    8,
     'initial_balance',
+    'bootstrap',
+    'welcome_grant',
     concat('cs:welcome:', NEW.id::text),
     jsonb_build_object(
       'wallet_key', 'car_studio',
       'wallet_code', 'CS',
       'product_id', 'car-studio',
-      'note', 'Initial Car Studio balance (2 free credits)'
+      'note', 'Initial Car Studio balance (8 free credits)'
     )
   );
 
@@ -250,7 +301,7 @@ CREATE TRIGGER trg_cs_bootstrap_wallet_on_hub_user_insert
 AFTER INSERT ON public.hub_users
 FOR EACH ROW EXECUTE FUNCTION public.cs_bootstrap_wallet_on_hub_user_insert();
 
--- 5) Backfill users missing CS wallet
+-- 6) Backfill users missing CS wallet
 DO $$
 DECLARE
   v_user RECORD;
@@ -268,16 +319,16 @@ BEGIN
       SELECT * INTO v_result
       FROM public.cs_grant_credits(
         v_user.id,
-        2,
-        'manual_grant',
+        8,
+        'initial_balance',
         'migration',
-        'initial_backfill',
+        'welcome_grant_backfill',
         concat('cs:welcome:backfill:', v_user.id::text),
         jsonb_build_object(
           'wallet_key', 'car_studio',
           'wallet_code', 'CS',
           'product_id', 'car-studio',
-          'note', 'Initial Car Studio balance backfill'
+          'note', 'Initial Car Studio balance backfill (8 free credits)'
         )
       );
     EXCEPTION

@@ -82,7 +82,7 @@ export async function getBalanceByEmail(supabase: SupabaseClient, email: string)
   const userId = await resolveUserIdByEmail(supabase, email);
 
   const { data, error } = await supabase
-    .from("user_credit_wallets")
+    .from("cs_user_wallets")
     .select("balance")
     .eq("user_id", userId)
     .eq("wallet_key", CS_WALLET_KEY)
@@ -108,7 +108,7 @@ export async function consumeCreditByEmail(
 ) {
   const userId = await resolveUserIdByEmail(supabase, email);
 
-  const { data, error } = await supabase.rpc("spend_credits", {
+  const { data, error } = await supabase.rpc("cs_spend_credits", {
     p_user_id: userId,
     p_amount: 1,
     p_reason: "generation" satisfies CreditReason,
@@ -141,7 +141,7 @@ export async function grantCreditByEmail(
 ) {
   const userId = await resolveUserIdByEmail(supabase, email);
 
-  const { data, error } = await supabase.rpc("grant_credits", {
+  const { data, error } = await supabase.rpc("cs_grant_credits", {
     p_user_id: userId,
     p_amount: amount,
     p_reason: reason,
