@@ -67,7 +67,9 @@ export function StudioApp() {
   }, [supabase]);
 
   const refreshCredits = useCallback(async () => {
+    console.log("refreshCredits: starting");
     if (!supabase) {
+      console.log("refreshCredits: no supabase client");
       setCredits(0);
       setIsLoadingCredits(false);
       return;
@@ -75,6 +77,7 @@ export function StudioApp() {
 
     setIsLoadingCredits(true);
     const accessToken = await getAccessToken();
+    console.log("refreshCredits: accessToken", accessToken ? "present" : "missing");
 
     try {
       const response = await fetch("/api/credits", {
@@ -86,20 +89,26 @@ export function StudioApp() {
           : undefined,
       });
 
+      console.log("refreshCredits: response status", response.status);
       const payload = (await response.json()) as CreditsResponse;
+      console.log("refreshCredits: payload", payload);
 
       if (!response.ok || payload.error) {
+        console.log("refreshCredits: error in response", payload.error);
         setCredits(0);
         setAuthNotice(payload.error ?? "Não foi possível carregar seus créditos.");
         return;
       }
 
+      console.log("refreshCredits: setting credits", payload.creditsBalance);
       setCredits(payload.creditsBalance ?? 0);
       setUser(payload.email ? { email: payload.email } : null);
-    } catch {
+    } catch (error) {
+      console.log("refreshCredits: catch error", error);
       setCredits(0);
       setAuthNotice("Não foi possível carregar seus créditos.");
     } finally {
+      console.log("refreshCredits: finally, setting isLoadingCredits to false");
       setIsLoadingCredits(false);
     }
   }, [getAccessToken, supabase]);
@@ -500,7 +509,18 @@ export function StudioApp() {
             selectedImageUrl={selectedItem ? (selectedItem.resultUrl ?? selectedItem.previewUrl) : null}
             selectedBackgroundLabel={BACKGROUND_VARIANTS[background].label}
             hasSelection={Boolean(selectedItem)}
-            canGenerateSelected={Boolean(selectedItem) && !isProcessing && !isLoadingCredits && credits > 0}
+            canGenerateSelected={(() => {
+              const canGenerate = Boolean(selectedItem) && !isProcessing && !isLoadingCredits && credits > 0;
+              console.log("canGenerateSelected debug:", {
+                hasSelectedItem: Boolean(selectedItem),
+                isProcessing,
+                isLoadingCredits,
+                credits,
+                canGenerate,
+                selectedItemName: selectedItem?.name
+              });
+              return canGenerate;
+            })()}
             canGenerateAll={totals.pending > 0 && !isProcessing && !isLoadingCredits && credits > 0}
             onSelectItem={setSelectedItemId}
             onGenerateSelected={handleGenerateSelected}
