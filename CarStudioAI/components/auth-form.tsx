@@ -22,23 +22,11 @@ export function AuthForm({ redirectTo = "/studio" }: AuthFormProps) {
     : `/auth/callback?next=${encodeURIComponent(redirectTo)}`;
 
   const handleGoogleLogin = async () => {
-    if (!supabase) {
-      setMessage({ type: "error", text: "Serviço de autenticação indisponível." });
-      return;
-    }
-
     setGoogleLoading(true);
     setMessage(null);
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: callbackUrl },
-    });
-
-    if (error) {
-      setMessage({ type: "error", text: error.message });
-      setGoogleLoading(false);
-    }
+    const target = `/api/auth/google?redirect_to=${encodeURIComponent(redirectTo)}`;
+    window.location.assign(target);
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
