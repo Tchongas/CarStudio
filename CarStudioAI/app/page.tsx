@@ -1,5 +1,6 @@
 import { BadgeCheck, Sparkles } from "lucide-react";
 import { AuthForm } from "@/components/auth-form";
+import { CREDIT_PURCHASE_OPTIONS } from "@/lib/credits/purchase-links";
 
 export default function HomePage() {
   return (
@@ -38,6 +39,32 @@ export default function HomePage() {
             <li className="flex items-center gap-2"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> Resultados em segundos com IA</li>
             <li className="flex items-center gap-2"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> 5 cenários profissionais inclusos</li>
           </ul>
+
+          <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-5 sm:p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">Comprar créditos</p>
+            <h2 className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">Pacotes prontos para continuar gerando</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-300">
+              Escolha o pacote ideal para seu volume de anúncios e finalize a compra no Hotmart.
+            </p>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              {CREDIT_PURCHASE_OPTIONS.map((option) => (
+                <a
+                  key={option.credits}
+                  href={option.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-2xl border border-white/10 bg-zinc-900/80 p-4 transition hover:border-white/30 hover:bg-zinc-900"
+                >
+                  <p className="text-lg font-semibold text-white">{option.credits} créditos</p>
+                  <p className="mt-1 text-xs text-zinc-400">Pagamento seguro via Hotmart</p>
+                  <span className="mt-4 inline-flex rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black">
+                    {option.label}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
         </section>
 
         <section className="w-full rounded-3xl border border-white/10 bg-zinc-900/80 p-7 sm:p-10 lg:max-w-sm">
