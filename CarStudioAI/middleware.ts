@@ -11,7 +11,7 @@ import { createSupabaseMiddlewareClient } from "@/lib/supabase/middleware";
  * Also refreshes the session cookie on every request.
  */
 
-const PROTECTED_PATHS = ["/studio"];
+const PROTECTED_PATHS = ["/studio", "/admin"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -55,5 +55,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/studio/:path*"],
+  matcher: ["/studio/:path*", "/admin/:path*"],
 };

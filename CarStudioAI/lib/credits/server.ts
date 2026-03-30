@@ -12,6 +12,10 @@ type RpcResultRow = {
   ledger_id?: string;
 };
 
+export function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
 // ---------------------------------------------------------------------------
 // Auth helpers
 // ---------------------------------------------------------------------------
@@ -57,7 +61,7 @@ export async function getAuthenticatedEmail(request: Request, supabase: Supabase
 // ---------------------------------------------------------------------------
 
 async function resolveUserIdByEmail(supabase: SupabaseClient, email: string): Promise<string> {
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedEmail = normalizeEmail(email);
 
   const { data, error } = await supabase.rpc("cs_resolve_user_id_by_email", {
     p_email: normalizedEmail,
@@ -93,6 +97,79 @@ export async function getBalanceByEmail(supabase: SupabaseClient, email: string)
   }
 
   return Number(data?.balance ?? 0);
+}
+
+export async function setBalanceByEmail(
+  supabase: SupabaseClient,
+  email: string,
+  targetBalance: number,
+  adminEmail: string,
+  referenceId: string,
+) {
+  const normalizedEmail = normalizeEmail(email);
+  const normalizedAdminEmail = normalizeEmail(adminEmail);
+  const safeTargetBalance = Math.max(0, Math.trunc(targetBalance));
+  const currentBalance = await getBalanceByEmail(supabase, normalizedEmail);
+  const delta = safeTargetBalance - currentBalance;
+
+  if (delta === 0) {
+    return {
+      previousBalance: currentBalance,
+      newBalance: currentBalance,
+      adjustmentAmount: 0,
+    };
+  }
+
+  const userId = await resolveUserIdByEmail(supabase, normalizedEmail);
+  const idempotencyKey = `cs:admin-balance:${referenceId}`;
+  const meta = buildWalletMeta({
+    target_balance: safeTargetBalance,
+    previous_balance: currentBalance,
+    admin_email: normalizedAdminEmail,
+    target_email: normalizedEmail,
+  });
+
+  if (delta > 0) {
+    const { data, error } = await supabase.rpc("cs_grant_credits", {
+      p_user_id: userId,
+      p_amount: delta,
+      p_reason: "adjustment" satisfies CreditReason,
+      p_reference_type: "admin" satisfies CreditReferenceType,
+      p_reference_id: referenceId,
+      p_idempotency_key: idempotencyKey,
+      p_meta: meta,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return {
+      previousBalance: currentBalance,
+      newBalance: extractNewBalance(data),
+      adjustmentAmount: delta,
+    };
+  }
+
+  const { data, error } = await supabase.rpc("cs_spend_credits", {
+    p_user_id: userId,
+    p_amount: Math.abs(delta),
+    p_reason: "adjustment" satisfies CreditReason,
+    p_reference_type: "admin" satisfies CreditReferenceType,
+    p_reference_id: referenceId,
+    p_idempotency_key: idempotencyKey,
+    p_meta: meta,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return {
+    previousBalance: currentBalance,
+    newBalance: extractNewBalance(data),
+    adjustmentAmount: delta,
+  };
 }
 
 // ---------------------------------------------------------------------------
