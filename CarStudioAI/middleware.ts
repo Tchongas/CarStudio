@@ -48,6 +48,11 @@ export async function middleware(request: NextRequest) {
   if (!user) {
     const handoffStartUrl = new URL("/api/auth/google", request.url);
     handoffStartUrl.searchParams.set("redirect_to", `${pathname}${request.nextUrl.search}`);
+
+    if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+      handoffStartUrl.searchParams.set("force_supabase", "1");
+    }
+
     return NextResponse.redirect(handoffStartUrl);
   }
 

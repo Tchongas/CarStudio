@@ -102,7 +102,7 @@ export async function requireAdminPageAccess() {
   const email = user?.email ? normalizeEmail(user.email) : null;
 
   if (!user || !email || !isGoogleUser(user)) {
-    redirect("/api/auth/google?redirect_to=%2Fadmin");
+    redirect("/api/auth/google?redirect_to=%2Fadmin&force_supabase=1");
   }
 
   if (!isAdminEmail(email)) {

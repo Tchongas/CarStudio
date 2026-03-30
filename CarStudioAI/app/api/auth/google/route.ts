@@ -23,6 +23,7 @@ function buildCookieOptions() {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const requestedRedirect = url.searchParams.get("redirect_to");
+  const forceSupabase = url.searchParams.get("force_supabase") === "1";
   const safeRedirect = sanitizeRedirectPath(requestedRedirect, getDefaultRedirectPath());
   const callbackUrl = createAbsoluteUrl(request, "/api/auth/callback");
   const parsedCookies = parseCookieHeader(request.headers.get("cookie"));
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
 
   const hubLoginUrl = process.env.HUB_CARSTUDIO_LOGIN_URL?.trim();
 
-  if (hubLoginUrl) {
+  if (hubLoginUrl && !forceSupabase) {
     const { hubStartUrl, nonce } = buildHubStartUrl(request, safeRedirect, existingPendingNonce);
     const response = NextResponse.redirect(hubStartUrl);
     const cookieOptions = buildCookieOptions();
@@ -94,7 +95,7 @@ export async function GET(request: Request) {
   console.info(
     JSON.stringify({
       event: "car_studio_hub_start_redirect",
-      mode: "supabase_fallback",
+      mode: forceSupabase ? "supabase_forced" : "supabase_fallback",
       target: data.url,
       callback: oauthCallback.toString(),
       redirect_to: safeRedirect,
