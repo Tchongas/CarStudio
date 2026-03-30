@@ -1,9 +1,9 @@
 import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
-import { type User } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { HUB_SESSION_COOKIE_NAME, verifyHubSessionToken } from "@/lib/auth/hub-handoff";
 import { createServerSupabaseServiceClient } from "@/lib/supabase/server";
 import { getAuthenticatedEmail, normalizeEmail } from "@/lib/credits/server";
 
@@ -24,42 +24,12 @@ export function isAdminEmail(email: string | null | undefined) {
   return getAdminEmailAllowlist().includes(normalizeEmail(email));
 }
 
-function isGoogleUser(user: User | null) {
-  if (!user) {
-    return false;
-  }
-
-  const provider = typeof user.app_metadata?.provider === "string"
-    ? user.app_metadata.provider.toLowerCase()
-    : "";
-
-  const providers = Array.isArray(user.app_metadata?.providers)
-    ? user.app_metadata.providers.map((item) => String(item).toLowerCase())
-    : [];
-
-  return provider === "google" || providers.includes("google");
-}
-
 export async function requireAdminRequest(request: Request) {
   const supabase = createServerSupabaseServiceClient();
   const authResult = await getAuthenticatedEmail(request, supabase);
 
   if (!authResult.email) {
-    return { ok: false as const, status: 401, error: "Faça login com Google para acessar a área administrativa." };
-  }
-
-  const authHeader = request.headers.get("authorization") ?? "";
-  const [scheme, token] = authHeader.split(" ");
-
-  if (scheme?.toLowerCase() !== "bearer" || !token) {
-    return { ok: false as const, status: 401, error: "Sessão administrativa inválida. Entre novamente com Google." };
-  }
-
-  const { data, error } = await supabase.auth.getUser(token);
-  const user = data.user ?? null;
-
-  if (error || !user || !isGoogleUser(user)) {
-    return { ok: false as const, status: 403, error: "A área administrativa requer login via Google." };
+    return { ok: false as const, status: 401, error: "Faça login para acessar a área administrativa." };
   }
 
   if (!isAdminEmail(authResult.email)) {
@@ -75,6 +45,19 @@ export async function requireAdminRequest(request: Request) {
 
 export async function requireAdminPageAccess() {
   const cookieStore = await cookies();
+  const hubSessionCookie = cookieStore.get(HUB_SESSION_COOKIE_NAME)?.value;
+
+  if (hubSessionCookie) {
+    const hubSession = await verifyHubSessionToken(hubSessionCookie);
+    const hubEmail = hubSession?.email ? normalizeEmail(hubSession.email) : null;
+
+    if (hubEmail && isAdminEmail(hubEmail)) {
+      return {
+        email: hubEmail,
+      };
+    }
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -101,7 +84,7 @@ export async function requireAdminPageAccess() {
 
   const email = user?.email ? normalizeEmail(user.email) : null;
 
-  if (!user || !email || !isGoogleUser(user)) {
+  if (!user || !email) {
     redirect("/api/auth/google?redirect_to=%2Fadmin&force_supabase=1");
   }
 

@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Loader2, Search, ShieldCheck } from "lucide-react";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 type LookupResponse = {
   email?: string;
@@ -17,7 +16,6 @@ type CreditsAdminDashboardProps = {
 };
 
 export function CreditsAdminDashboard({ adminEmail }: CreditsAdminDashboardProps) {
-  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [email, setEmail] = useState("");
   const [balanceInput, setBalanceInput] = useState("");
   const [resolvedEmail, setResolvedEmail] = useState<string | null>(null);
@@ -25,15 +23,6 @@ export function CreditsAdminDashboard({ adminEmail }: CreditsAdminDashboardProps
   const [feedback, setFeedback] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
-  async function getAccessToken() {
-    if (!supabase) {
-      return null;
-    }
-
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? null;
-  }
 
   const handleLookup = async () => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -47,10 +36,7 @@ export function CreditsAdminDashboard({ adminEmail }: CreditsAdminDashboardProps
     setFeedback(null);
 
     try {
-      const accessToken = await getAccessToken();
-      const response = await fetch(`/api/admin/credits?email=${encodeURIComponent(normalizedEmail)}`, {
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
-      });
+      const response = await fetch(`/api/admin/credits?email=${encodeURIComponent(normalizedEmail)}`);
       const payload = (await response.json()) as LookupResponse;
 
       if (!response.ok || payload.error) {
@@ -88,12 +74,10 @@ export function CreditsAdminDashboard({ adminEmail }: CreditsAdminDashboardProps
     setFeedback(null);
 
     try {
-      const accessToken = await getAccessToken();
       const response = await fetch("/api/admin/credits", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify({
           email: resolvedEmail,
