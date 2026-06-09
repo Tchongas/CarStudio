@@ -1,13 +1,39 @@
+/**
+ * Autenticação via Hub (Área de Membros Integrada)
+ *
+ * Este módulo implementa o fluxo de "handoff" de autenticação entre
+ * o Hub de membros (membros.allanfulcher.com) e o Car Studio.
+ *
+ * Como funciona:
+ * 1. Usuário logado no Hub clica para acessar Car Studio
+ * 2. Hub gera token JWT assinado com HUB_JWT_SECRET
+ * 3. Token contém: sub (user id), email, nome, product, nonce
+ * 4. Car Studio valida o token e cria sessão própria (cookie)
+ * 5. Usuário está logado no Car Studio por 7 dias
+ *
+ * Segurança:
+ * - Tokens são assinados com HS256 (HMAC SHA-256)
+ * - Nonce previne replay attacks
+ * - Cookies são httpOnly, secure e sameSite=lax
+ * - Sessão expira em 7 dias
+ */
+
 import "server-only";
 
 import { SignJWT, jwtVerify } from "jose";
 
+/** Endpoint padrão do Hub para iniciar handoff */
 const HUB_START_ENDPOINT = "https://membros.allanfulcher.com/api/auth/car-studio/start";
+/** Identificador deste produto no Hub */
 const HUB_PRODUCT = "car-studio";
+/** Página padrão após login */
 const DEFAULT_REDIRECT = "/studio";
 
+/** Nome do cookie de sessão do Car Studio */
 export const HUB_SESSION_COOKIE_NAME = "car_studio_hub_session";
+/** Nome do cookie que guarda o nonce pendente */
 export const HUB_PENDING_NONCE_COOKIE_NAME = "car_studio_hub_nonce";
+/** Nome do cookie que guarda o redirect pendente */
 export const HUB_PENDING_REDIRECT_COOKIE_NAME = "car_studio_hub_redirect";
 
 type HubHandoffClaims = {

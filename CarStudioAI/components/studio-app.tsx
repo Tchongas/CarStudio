@@ -1,3 +1,21 @@
+/**
+ * Componente principal do Studio Car Studio AI.
+ *
+ * Este é o "cérebro" da aplicação, responsável por:
+ * - Gerenciar upload de imagens (drag & drop ou seleção)
+ * - Controlar seleção de fundos (predefinidos ou customizado)
+ * - Enviar imagens para processamento via API /api/generate
+ * - Exibir resultados e permitir download
+ * - Gerenciar saldo de créditos do usuário
+ *
+ * Estados principais:
+ * - items: lista de imagens enviadas para processamento
+ * - selectedItemId: imagem atualmente selecionada
+ * - background: fundo escolhido (white, dark, industrial, etc.)
+ * - credits: saldo de créditos do usuário
+ * - isProcessing: se há uma geração em andamento
+ */
+
 "use client";
 
 import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
@@ -13,16 +31,19 @@ import { StudioHeader } from "@/components/studio/studio-header";
 import type { QueueItem } from "@/components/studio/types";
 import { UploadGalleryPanel } from "@/components/studio/upload-gallery-panel";
 
+/** Informações básicas do usuário logado */
 type UserPreview = {
   email: string;
 };
 
+/** Resposta da API de consulta de créditos */
 type CreditsResponse = {
   creditsBalance?: number;
   email?: string;
   error?: string;
 };
 
+/** Resposta da API de geração de imagem */
 type GenerateResponse = CreditsResponse & {
   imageUrl?: string;
 };

@@ -1,3 +1,16 @@
+/**
+ * Operações server-side do sistema de créditos do Car Studio.
+ *
+ * Este módulo contém todas as funções que manipulam créditos no banco de dados:
+ * - Consulta de saldo (getBalanceByEmail)
+ * - Consumo de créditos para geração de imagens (consumeCreditByEmail)
+ * - Concessão de créditos (grantCreditByEmail) - usado para reembolsos
+ * - Ajuste administrativo de saldo (setBalanceByEmail)
+ *
+ * Todas as operações usam as funções RPC do Supabase (cs_spend_credits, cs_grant_credits)
+ * para garantir atomicidade e consistência dos dados.
+ */
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getHubSessionFromRequest } from "@/lib/auth/hub-handoff";
 import {
@@ -7,11 +20,13 @@ import {
   type CreditReferenceType,
 } from "./constants";
 
+/** Tipo de retorno das funções RPC que alteram saldo */
 type RpcResultRow = {
   new_balance?: number;
   ledger_id?: string;
 };
 
+/** Normaliza e-mail para comparação consistente (minúsculas, sem espaços) */
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }

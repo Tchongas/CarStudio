@@ -1,3 +1,25 @@
+/**
+ * API Route: POST /api/generate
+ *
+ * Gera uma imagem de estúdio a partir de uma foto de veículo usando IA (Google Gemini).
+ * Consome 1 crédito do usuário e faz reembolso automático em caso de falha.
+ *
+ * Fluxo:
+ * 1. Valida autenticação do usuário
+ * 2. Consome 1 crédito (debita da carteira)
+ * 3. Chama Google Gemini para substituir o fundo da imagem
+ * 4. Se sucesso: retorna imagem gerada + novo saldo
+ * 5. Se falha: reembolsa o crédito e retorna erro
+ *
+ * Requisição: { base64Image, mimeType, background, [customBackground], requestId }
+ * Respostas:
+ * - 200: { imageUrl: string, creditsBalance: number }
+ * - 400: Dados inválidos ou imagem não é um veículo
+ * - 401: Não autenticado
+ * - 403: Sem créditos suficientes ou usuário não sincronizado
+ * - 500/502: Erro no serviço de IA ou servidor
+ */
+
 import { NextResponse } from "next/server";
 import { BACKGROUND_VARIANTS, type BackgroundId } from "@/lib/ai/backgrounds";
 import { generateCarStudioImage } from "@/lib/ai/gemini-service";
@@ -10,6 +32,7 @@ import {
 } from "@/lib/credits/server";
 import { createServerSupabaseServiceClient } from "@/lib/supabase/server";
 
+/** Corpo da requisição esperado */
 type GenerateBody = {
   base64Image?: string;
   mimeType?: string;

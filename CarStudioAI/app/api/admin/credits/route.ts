@@ -1,3 +1,22 @@
+/**
+ * API Route Admin: /api/admin/credits
+ *
+ * Permite que administradores consultem e ajustem o saldo de créditos de qualquer usuário.
+ * Todas as operações são registradas no ledger para auditoria.
+ *
+ * GET /api/admin/credits?email=usuario@email.com
+ * - Retorna o saldo atual do usuário
+ *
+ * POST /api/admin/credits
+ * - Body: { email: string, targetBalance: number }
+ * - Ajusta o saldo para o valor especificado (aumenta ou diminui)
+ * - Registra a operação no ledger como 'adjustment'
+ *
+ * Segurança:
+ * - Requer autenticação como administrador (via CAR_STUDIO_ADMIN_EMAILS env var)
+ * - Retorna 401 se não autenticado, 403 se não for admin
+ */
+
 import { NextResponse } from "next/server";
 import { requireAdminRequest } from "@/lib/admin/auth";
 import {
@@ -7,11 +26,13 @@ import {
   setBalanceByEmail,
 } from "@/lib/credits/server";
 
+/** Body esperado para atualização de saldo */
 type UpdateBalanceBody = {
   email?: string;
   targetBalance?: number;
 };
 
+/** Consulta saldo de um usuário específico */
 export async function GET(request: Request) {
   const admin = await requireAdminRequest(request);
 

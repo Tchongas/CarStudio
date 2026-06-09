@@ -1,3 +1,19 @@
+/**
+ * API Route: GET /api/credits
+ *
+ * Retorna o saldo de créditos do usuário autenticado.
+ *
+ * Autenticação:
+ * - Bearer token (Supabase JWT) no header Authorization
+ * - Ou cookie de sessão do Hub (área de membros)
+ *
+ * Respostas:
+ * - 200: { creditsBalance: number, email: string }
+ * - 401: Usuário não autenticado
+ * - 403: Usuário não encontrado na base compartilhada (precisa sincronizar)
+ * - 500: Erro interno do servidor
+ */
+
 import { NextResponse } from "next/server";
 import {
   getAuthenticatedEmail,

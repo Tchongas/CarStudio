@@ -1,3 +1,17 @@
+/**
+ * Autenticação para área administrativa do Car Studio.
+ *
+ * Como funciona:
+ * - E-mails de administradores são definidos na variável de ambiente CAR_STUDIO_ADMIN_EMAILS
+ * - Formato: "admin1@email.com,admin2@email.com" (separados por vírgula)
+ * - Apenas esses e-mails têm acesso às rotas /admin/*
+ *
+ * Funções principais:
+ * - isAdminEmail(): Verifica se um e-mail está na lista de admins
+ * - requireAdminRequest(): Valida requisição de API (retorna erro JSON se não for admin)
+ * - requireAdminPageAccess(): Valida acesso a páginas (faz redirect se não for admin)
+ */
+
 import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
@@ -7,6 +21,10 @@ import { HUB_SESSION_COOKIE_NAME, verifyHubSessionToken } from "@/lib/auth/hub-h
 import { createServerSupabaseServiceClient } from "@/lib/supabase/server";
 import { getAuthenticatedEmail, normalizeEmail } from "@/lib/credits/server";
 
+/**
+ * Retorna lista de e-mails de administradores autorizados.
+ * Lê da variável de ambiente CAR_STUDIO_ADMIN_EMAILS.
+ */
 export function getAdminEmailAllowlist() {
   const raw = process.env.CAR_STUDIO_ADMIN_EMAILS ?? "";
 

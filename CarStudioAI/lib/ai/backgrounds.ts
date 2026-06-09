@@ -1,3 +1,16 @@
+/**
+ * Prompt base enviado para a IA (Google Gemini)
+ *
+ * Instruções críticas para a geração de imagens:
+ * - O veículo deve ser preservado EXATAMENTE como na foto original
+ * - Não remover defeitos, riscos ou sujeiras (fidelidade total)
+ * - Não alterar rodas, faróis, acessórios ou placa
+ * - Substituir apenas o fundo, mantendo iluminação consistente
+ * - Adicionar sombras realistas sob os pneus
+ *
+ * Se a imagem não for um veículo claro, a IA deve retornar:
+ * "Imagem inválida para processamento automotivo."
+ */
 export const PROMPT_BASE = `Você é um especialista em edição e fotografia automotiva.
 Sua função é realizar uma substituição de fundo (background replacement) perfeita, mantendo a integridade absoluta do veículo original.
 

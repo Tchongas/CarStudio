@@ -6,9 +6,15 @@ import {
 import { createSupabaseMiddlewareClient } from "@/lib/supabase/middleware";
 
 /**
- * Production-grade middleware using @supabase/ssr.
- * Protects /studio — redirects unauthenticated users to /.
- * Also refreshes the session cookie on every request.
+ * Middleware de produção usando @supabase/ssr.
+ * Protege as rotas /studio e /admin — redireciona usuários não autenticados para login.
+ * Também atualiza o cookie de sessão em cada requisição.
+ *
+ * Fluxo de autenticação:
+ * 1. Verifica se a rota é protegida (studio ou admin)
+ * 2. Tenta autenticar via cookie do Hub (área de membros)
+ * 3. Se não tiver Hub, tenta autenticar via Supabase
+ * 4. Se não estiver autenticado, redireciona para /api/auth/google
  */
 
 const PROTECTED_PATHS = ["/studio", "/admin"];

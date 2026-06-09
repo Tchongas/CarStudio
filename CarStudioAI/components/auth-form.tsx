@@ -1,10 +1,33 @@
+/**
+ * Formulário de Autenticação (Login/Cadastro)
+ *
+ * Componente que permite aos usuários:
+ * - Fazer login com Google (OAuth)
+ * - Fazer login com Email + Senha
+ * - Criar nova conta com Email + Senha
+ *
+ * Fluxo Google:
+ * 1. Usuário clica no botão "Entrar com Google"
+ * 2. Redirecionado para /api/auth/google
+ * 3. Que redireciona para OAuth do Google
+ * 4. Callback troca code por sessão
+ * 5. Redireciona para a página destino
+ *
+ * Fluxo Email/Senha:
+ * 1. Usuário preenche email e senha
+ * 2. Se modo "login": chama signInWithPassword
+ * 3. Se modo "signup": chama signUp (envia email de confirmação)
+ */
+
 "use client";
 
 import { useMemo, useState } from "react";
 import { Loader2, Mail } from "lucide-react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
+/** Props do formulário de autenticação */
 type AuthFormProps = {
+  /** Para onde redirecionar após login bem-sucedido */
   redirectTo?: string;
 };
 

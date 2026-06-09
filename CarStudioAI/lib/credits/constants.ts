@@ -1,6 +1,16 @@
 /**
- * Car Studio credit wallet constants.
- * Must match the values in credit_wallet_definitions and the Hub credit catalog.
+ * Constantes da carteira de créditos do Car Studio.
+ * Devem corresponder aos valores em credit_wallet_definitions e no catálogo de créditos do Hub.
+ *
+ * Convenções usadas:
+ * - CS_WALLET_KEY: chave única da carteira no banco (usada em todas as tabelas)
+ * - CS_WALLET_CODE: código curto para identificação
+ * - CS_PRODUCT_ID: ID do produto no sistema Hotmart/Hub
+ *
+ * Esses valores são usados em:
+ * - user_credit_wallets (saldo do usuário)
+ * - credit_ledger (histórico de transações)
+ * - credit_wallet_definitions (catálogo de carteiras)
  */
 
 export const CS_WALLET_KEY = "car_studio" as const;

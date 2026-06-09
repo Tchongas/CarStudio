@@ -1,8 +1,29 @@
+/**
+ * Dashboard Administrativo de Gestão de Créditos
+ *
+ * Permite que administradores:
+ * - Consultem saldo de créditos de qualquer usuário por e-mail
+ * - Ajustem o saldo para um valor específico (aumentar ou diminuir)
+ * - Vejam histórico de ajustes
+ *
+ * Segurança:
+ * - Requer autenticação como admin (via CAR_STUDIO_ADMIN_EMAILS)
+ * - Todas as operações são registradas no credit_ledger
+ * - API valida permissões em cada requisição
+ *
+ * Fluxo de uso:
+ * 1. Digite o e-mail do usuário e clique "Buscar saldo"
+ * 2. Veja o saldo atual na caixa à direita
+ * 3. Digite o novo saldo desejado e clique "Salvar novo saldo"
+ * 4. O sistema ajusta automaticamente (grant ou spend conforme necessário)
+ */
+
 "use client";
 
 import { useState } from "react";
 import { Loader2, Search, ShieldCheck } from "lucide-react";
 
+/** Resposta da API de consulta/ajuste de créditos */
 type LookupResponse = {
   email?: string;
   creditsBalance?: number;
@@ -11,7 +32,9 @@ type LookupResponse = {
   error?: string;
 };
 
+/** Props do dashboard admin */
 type CreditsAdminDashboardProps = {
+  /** E-mail do administrador logado (para exibição) */
   adminEmail: string;
 };
 

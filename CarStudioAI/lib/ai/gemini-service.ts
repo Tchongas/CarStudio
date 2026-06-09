@@ -1,7 +1,28 @@
+/**
+ * Serviço de integração com Google Gemini AI
+ *
+ * Responsável por gerar imagens de estúdio a partir de fotos de veículos.
+ * Usa o modelo Gemini 2.5 Flash Image para substituição de fundo.
+ *
+ * Fluxo:
+ * 1. Recebe imagem do veículo (base64)
+ * 2. Recebe fundo escolhido (predefinido ou customizado)
+ * 3. Monta prompt com instruções específicas
+ * 4. Chama API Gemini
+ * 5. Retorna imagem gerada ou mensagem de erro
+ *
+ * Limitações:
+ * - Apenas imagens de veículos são aceitas
+ * - A IA deve preservar todos os detalhes do carro original
+ * - Fundo é substituído mantendo iluminação consistente
+ */
+
 import { GoogleGenAI } from "@google/genai";
 import { BACKGROUND_VARIANTS, PROMPT_BASE, type BackgroundId } from "@/lib/ai/backgrounds";
 
+/** Modelo Gemini usado para geração de imagens */
 const GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image";
+/** Texto que indica imagem inválida (não é um veículo) */
 const INVALID_VEHICLE_TEXT = "Imagem inválida";
 
 type GenerateCarStudioImageInput = {
