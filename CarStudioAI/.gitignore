@@ -1,14 +1,14 @@
 # Dependências
-node_modules/
-.pnp
+/node_modules
+/.pnp
 .pnp.js
 .yarn/install-state.gz
 
 # Build
-.next/
-out/
-build/
-dist/
+/.next/
+/out/
+/build
+/dist
 
 # Variáveis de ambiente (NUNCA commitar!)
 .env
